@@ -1,0 +1,1605 @@
+openapi: 3.1.0
+info:
+  title: PebNews Public API
+  version: 1.0.0
+  description: |
+    JSON API for the PebNews public frontend, including reader accounts.
+
+    All responses use the `/api/v1` prefix. Collections are paginated with
+    `data`, `meta`, and `links` objects. Validation failures return HTTP 422
+    with Laravel's standard error structure.
+
+    Reader authentication uses Laravel Sanctum cookie-based SPA sessions.
+    Before the first stateful request, the frontend must call
+    `GET /sanctum/csrf-cookie` on the backend origin with credentials enabled
+    and send the resulting session cookie plus the `X-XSRF-TOKEN` header on
+    every stateful request. Authenticated requests use the session cookie; no
+    bearer token is issued.
+
+    Reader accounts are completely separate from CMS accounts. A CMS session
+    never authenticates a reader endpoint, and a reader session never grants
+    CMS access.
+
+    Browser-navigated flows (`/auth/email/verify/*` and `/auth/google/*`)
+    redirect back to the configured frontend routes with a `status` query
+    parameter. Rate limits return HTTP 429 and are documented per endpoint.
+servers:
+  - url: https://pebnews.pebnews.com/api/v1
+    description: Production API
+tags:
+  - name: Homepage
+    description: Homepage content modules.
+  - name: Articles
+    description: Eligible published articles.
+  - name: Categories
+    description: Article categories.
+  - name: Tags
+    description: Article tags.
+  - name: Labels
+    description: Editorial labels and their articles.
+  - name: Reporters
+    description: Active reporter profiles.
+  - name: System
+    description: Operational endpoints.
+  - name: Auth
+    description: Reader registration, sessions, verification, password reset, and Google OAuth.
+  - name: Profile
+    description: Authenticated reader profile and account management.
+  - name: Bookmarks
+    description: Authenticated reader bookmarks.
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: API health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: The API is available.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+  /openapi.yaml:
+    get:
+      tags: [System]
+      summary: Download the OpenAPI specification
+      operationId: getOpenApiSpecification
+      responses:
+        '200':
+          description: The OpenAPI 3.1 specification.
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /homepage:
+    get:
+      tags: [Homepage]
+      summary: Retrieve homepage modules
+      description: |
+        Returns the Breaking News, Lead Stories, and Latest News modules.
+        Every module contains only articles eligible for publication.
+        Lead Stories falls back to the latest eligible article when no
+        assignment qualifies. Latest News excludes articles already shown in
+        Lead Stories, including the fallback article, and returns at most four
+        articles.
+      operationId: getHomepage
+      responses:
+        '200':
+          description: The homepage modules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomepageResponse'
+  /homepage/breaking-news:
+    get:
+      tags: [Homepage]
+      summary: Retrieve Breaking News
+      description: |
+        Active, eligible Breaking News assignments ordered by newest
+        assignment start first. An article appears at most once even when it
+        has multiple active assignments.
+      operationId: getBreakingNews
+      responses:
+        '200':
+          description: Breaking News article summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleSummaryCollection'
+  /homepage/lead-stories:
+    get:
+      tags: [Homepage]
+      summary: Retrieve Lead Stories
+      description: |
+        Active, eligible Lead Stories assignments ordered by newest assignment
+        start first. When no assignment qualifies, returns an array containing
+        the latest eligible article. Returns an empty array when no eligible
+        article exists.
+      operationId: getLeadStories
+      responses:
+        '200':
+          description: Lead Stories article summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleSummaryCollection'
+  /homepage/latest-news:
+    get:
+      tags: [Homepage]
+      summary: Retrieve Latest News
+      description: |
+        The four newest eligible articles, excluding articles already shown in
+        Lead Stories, including the fallback article. Breaking News articles
+        may still appear here.
+      operationId: getLatestNews
+      responses:
+        '200':
+          description: Latest News article summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleSummaryCollection'
+  /articles:
+    get:
+      tags: [Articles]
+      summary: List eligible articles
+      description: |
+        Returns published articles whose publication time has been reached.
+        Filters are combinable. Unknown category, tag, or reporter slugs
+        return an empty collection rather than an error.
+      operationId: listArticles
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/CategoryFilter'
+        - $ref: '#/components/parameters/TagFilter'
+        - $ref: '#/components/parameters/ReporterFilter'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: A paginated list of eligible articles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleCollection'
+              examples:
+                list:
+                  value:
+                    data:
+                      - title: Example Article
+                        slug: example-article
+                        excerpt: A short article summary.
+                        featured_image:
+                          url: https://example.com/storage/articles/example.jpg
+                          caption: Image caption
+                        published_at: '2026-11-04T10:00:00Z'
+                        byline: Jane Doe
+                        category:
+                          title: Politics
+                          slug: politics
+                        tags:
+                          - title: '#election'
+                            slug: election
+                        labels:
+                          - name: Exclusive
+                            slug: exclusive
+                            description: Exclusive reporting.
+                        reporters:
+                          - name: Jane Doe
+                            slug: jane-doe
+                            photo: https://example.com/storage/reporters/jane-doe.jpg
+                    meta:
+                      current_page: 1
+                      from: 1
+                      last_page: 1
+                      links:
+                        - url: https://example.com/api/v1/articles?page=1
+                          label: '1'
+                          active: true
+                      path: https://example.com/api/v1/articles
+                      per_page: 15
+                      to: 1
+                      total: 1
+                    links:
+                      first: https://example.com/api/v1/articles?page=1
+                      last: https://example.com/api/v1/articles?page=1
+                      prev: null
+                      next: null
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /articles/{slug}:
+    get:
+      tags: [Articles]
+      summary: Retrieve an eligible article
+      operationId: getArticle
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The requested article.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+              examples:
+                detail:
+                  value:
+                    data:
+                      title: Example Article
+                      slug: example-article
+                      excerpt: A short article summary.
+                      featured_image:
+                        url: https://example.com/storage/articles/example.jpg
+                        caption: Image caption
+                      published_at: '2026-11-04T10:00:00Z'
+                      byline: Jane Doe
+                      category:
+                        title: Politics
+                        slug: politics
+                      tags:
+                        - title: '#election'
+                          slug: election
+                      labels:
+                        - name: Exclusive
+                          slug: exclusive
+                          description: Exclusive reporting.
+                      reporters:
+                        - name: Jane Doe
+                          slug: jane-doe
+                          photo: https://example.com/storage/reporters/jane-doe.jpg
+                      body: '<p>Article content...</p>'
+                      seo:
+                        title: Example Article
+                        description: A short article summary.
+                        canonical_url: https://example.com/articles/example-article
+                        image_url: https://example.com/storage/articles/example.jpg
+                        image_alt: Image caption
+                        type: article
+                        site_name: Pebnews
+                        twitter_card: summary_large_image
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      operationId: listCategories
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A paginated list of categories.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCollection'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /categories/{slug}:
+    get:
+      tags: [Categories]
+      summary: Retrieve a category
+      operationId: getCategory
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The requested category.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List tags
+      operationId: listTags
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A paginated list of tags.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagCollection'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /tags/{slug}:
+    get:
+      tags: [Tags]
+      summary: Retrieve a tag
+      operationId: getTag
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The requested tag.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /reporters:
+    get:
+      tags: [Reporters]
+      summary: List active reporters
+      description: Inactive reporters are excluded.
+      operationId: listReporters
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A paginated list of active reporters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReporterCollection'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /reporters/{slug}:
+    get:
+      tags: [Reporters]
+      summary: Retrieve an active reporter
+      description: Inactive reporters return HTTP 404.
+      operationId: getReporter
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The requested reporter profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReporterResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /labels:
+    get:
+      tags: [Labels]
+      summary: List labels
+      description: Returns every label ordered by name, including labels without eligible articles.
+      operationId: listLabels
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A paginated list of labels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelCollection'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /labels/{slug}:
+    get:
+      tags: [Labels]
+      summary: Retrieve a label
+      operationId: getLabel
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The requested label.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /labels/{slug}/articles:
+    get:
+      tags: [Labels]
+      summary: List eligible articles for a label
+      description: |
+        Returns eligible articles associated with the label. Only `page`,
+        `per_page`, `sort`, and `search` are supported. Unknown labels return
+        HTTP 404; labels without eligible articles return an empty collection.
+      operationId: listLabelArticles
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: A paginated list of eligible article summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleCollection'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a reader
+      description: |
+        Creates an unverified reader, sends a verification email, and starts a
+        reader session immediately. Registration is rate limited to 5 attempts
+        per hour per IP address.
+      operationId: registerReader
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterReaderRequest'
+            example:
+              name: Jane Reader
+              email: jane@example.com
+              password: Password123!
+              password_confirmation: Password123!
+      responses:
+        '201':
+          description: The reader was created and signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReaderResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/email/verify/{id}/{hash}:
+    get:
+      tags: [Auth]
+      summary: Verify a reader email address
+      description: |
+        Handles the signed link sent by email. The link expires after 60
+        minutes and does not require an authenticated session. The response is
+        a redirect to the frontend verification route with one of these
+        statuses: `verified`, `already_verified`, or `invalid`.
+      operationId: verifyReaderEmail
+      parameters:
+        - $ref: '#/components/parameters/ReaderId'
+        - $ref: '#/components/parameters/VerificationHash'
+      responses:
+        '302':
+          description: Redirect to the frontend verification route.
+          headers:
+            Location:
+              description: Frontend URL with a `status` query parameter.
+              schema:
+                type: string
+                format: uri
+  /auth/email/verification-notification:
+    post:
+      tags: [Auth]
+      summary: Resend the verification email
+      description: |
+        Resends the verification link to the authenticated reader. Returns 409
+        when the email is already verified. Rate limited to 3 requests per
+        minute per reader.
+      operationId: resendReaderVerification
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '202':
+          description: A new verification link was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in a reader
+      description: |
+        Authenticates a reader with an email address and password. Failed
+        attempts return a generic message that does not reveal whether the
+        email exists. Rate limited to 5 attempts per minute per email address
+        and IP address.
+      operationId: loginReader
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginReaderRequest'
+            example:
+              email: jane@example.com
+              password: Password123!
+              remember: true
+      responses:
+        '200':
+          description: The authenticated reader.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReaderResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Sign out the reader
+      description: |
+        Ends the reader session and regenerates the session and CSRF tokens.
+        Other guards sharing the PHP session, including CMS authentication,
+        are left intact.
+      operationId: logoutReader
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '204':
+          description: The reader session ended.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Retrieve the authenticated reader
+      operationId: getAuthenticatedReader
+      security:
+        - sanctumCookie: []
+      responses:
+        '200':
+          description: The authenticated reader.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReaderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      summary: Request a password reset link
+      description: |
+        Sends a reset link when the email belongs to a reader. The response is
+        identical when no account exists. Rate limited to 3 requests per minute
+        per email address and IP address.
+      operationId: requestReaderPasswordReset
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            example:
+              email: jane@example.com
+      responses:
+        '200':
+          description: The request was accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Reset a reader password
+      description: |
+        Resets the password with a broker token and invalidates existing reader
+        sessions. Rate limited to 5 attempts per minute per IP address.
+      operationId: resetReaderPassword
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              token: reset-token-from-email
+              email: jane@example.com
+              password: NewPassword123!
+              password_confirmation: NewPassword123!
+      responses:
+        '200':
+          description: The password was reset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/google/redirect:
+    get:
+      tags: [Auth]
+      summary: Begin Google authentication
+      description: |
+        Browser navigation endpoint that redirects to Google. Pass
+        `intent=connect` to link Google to the authenticated reader instead of
+        signing in. Rate limited to 10 requests per minute per IP address.
+      operationId: redirectToGoogle
+      parameters:
+        - $ref: '#/components/parameters/GoogleIntent'
+      responses:
+        '302':
+          description: Redirect to Google, or to the frontend with an error status.
+          headers:
+            Location:
+              description: Google authorization URL or frontend URL.
+              schema:
+                type: string
+                format: uri
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Complete Google authentication
+      description: |
+        Handles the Google callback and redirects to the frontend Google
+        callback route with one of these statuses: `authenticated`,
+        `connected`, `already_connected`, `already_linked`, `account_exists`,
+        `google_email_unverified`, `unauthenticated`, `unavailable`, or
+        `error`.
+
+        A matching email address never links Google automatically. An existing
+        reader must sign in and use the explicit connect flow. Rate limited to
+        10 requests per minute per IP address.
+      operationId: handleGoogleCallback
+      responses:
+        '302':
+          description: Redirect to the frontend Google callback route.
+          headers:
+            Location:
+              description: Frontend URL with a `status` query parameter.
+              schema:
+                type: string
+                format: uri
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /profile:
+    get:
+      tags: [Profile]
+      summary: View the authenticated reader profile
+      operationId: getReaderProfile
+      security:
+        - sanctumCookie: []
+      responses:
+        '200':
+          description: The reader profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReaderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Profile]
+      summary: Update the reader profile
+      description: |
+        Updates the reader name and optional profile photo. The email must be
+        verified. Accepted image types are JPEG, PNG, and WebP up to 2048 KB.
+        Send `remove_avatar` to delete the current photo.
+      operationId: updateReaderProfile
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: The updated reader profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReaderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Profile]
+      summary: Permanently delete the reader account
+      description: |
+        Deletes the reader, profile photo, bookmarks, linked Google identity,
+        and active sessions. Password accounts must confirm `current_password`;
+        Google-only accounts must send `confirmation: DELETE`. The email must
+        be verified.
+      operationId: deleteReaderAccount
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '204':
+          description: The account was deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /profile/email:
+    post:
+      tags: [Profile]
+      summary: Request an email change
+      description: |
+        Sends a confirmation link to the new address. The current email stays
+        active until the new address is confirmed. The email must be verified.
+        Rate limited to 3 requests per hour per reader.
+      operationId: requestReaderEmailChange
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestEmailChangeRequest'
+            example:
+              email: new@example.com
+      responses:
+        '202':
+          description: A confirmation link was sent to the new address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /profile/email/verify:
+    post:
+      tags: [Profile]
+      summary: Confirm an email change
+      description: |
+        Confirms the pending email address with the token sent to the new
+        address. The token expires after 60 minutes. The token is the
+        credential, so no session is required.
+      operationId: verifyReaderEmailChange
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailChangeRequest'
+            example:
+              token: email-change-token-from-email
+      responses:
+        '200':
+          description: The email address was updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /profile/google/connect:
+    post:
+      tags: [Profile]
+      summary: Start connecting Google
+      description: |
+        Returns the backend Google redirect URL with `intent=connect`. The
+        reader must then navigate to that URL to complete the explicit linking
+        flow. The email must be verified.
+      operationId: connectGoogleAccount
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '200':
+          description: The Google redirect URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleConnectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Profile]
+      summary: Disconnect Google
+      description: |
+        Removes the linked Google identity. Returns 422 when the reader has no
+        password because Google would be the only remaining sign-in method.
+        The email must be verified.
+      operationId: disconnectGoogleAccount
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '204':
+          description: Google was disconnected, or was not connected.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /bookmarks:
+    get:
+      tags: [Bookmarks]
+      summary: List the authenticated reader's bookmarks
+      description: |
+        Returns the reader's bookmarks for articles that are currently
+        eligible for publication. Bookmarks for ineligible articles are kept
+        but hidden until the article becomes eligible again. Ordered by
+        newest bookmark first.
+      operationId: listBookmarks
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A paginated list of the reader's bookmarks.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /articles/{slug}/bookmark:
+    post:
+      tags: [Bookmarks]
+      summary: Bookmark an article
+      description: |
+        Saves an eligible article for the authenticated reader. Returns 201
+        the first time and 200 when the article is already bookmarked; both
+        responses contain the same bookmark payload. Ineligible or unknown
+        articles return HTTP 404.
+      operationId: createBookmark
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '201':
+          description: The article was bookmarked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkResponse'
+        '200':
+          description: The article was already bookmarked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Bookmarks]
+      summary: Remove an article bookmark
+      description: |
+        Removes the authenticated reader's bookmark. Returns 204 whether or
+        not a bookmark existed, so repeated removal is safe.
+      operationId: deleteBookmark
+      security:
+        - sanctumCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '204':
+          description: The bookmark was removed, or did not exist.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    sanctumCookie:
+      type: apiKey
+      in: cookie
+      name: pebnews-session
+      description: |
+        Sanctum session cookie created by `GET /sanctum/csrf-cookie` and
+        refreshed on login. The cookie name follows `SESSION_COOKIE`. Requests
+        must be credentialed, come from a configured stateful domain, and send
+        the `X-XSRF-TOKEN` header for stateful methods.
+  parameters:
+    XsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: false
+      description: |
+        URL-decoded `XSRF-TOKEN` cookie value. Required for stateful methods
+        when CSRF protection is enabled; Laravel accepts this header for
+        first-party SPA requests.
+      schema:
+        type: string
+    ReaderId:
+      name: id
+      in: path
+      required: true
+      description: Reader primary key from the verification link.
+      schema:
+        type: integer
+    VerificationHash:
+      name: hash
+      in: path
+      required: true
+      description: SHA-1 hash of the reader email address from the signed link.
+      schema:
+        type: string
+    GoogleIntent:
+      name: intent
+      in: query
+      required: false
+      description: Use `connect` to link Google to the authenticated reader.
+      schema:
+        type: string
+        enum: [login, connect]
+        default: login
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Page number.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      required: false
+      description: Items per page. Values above 50 are clamped to 50.
+      schema:
+        type: integer
+        minimum: 1
+        default: 15
+        maximum: 50
+    CategoryFilter:
+      name: category
+      in: query
+      required: false
+      description: Category slug. Unknown slugs return an empty collection.
+      schema:
+        type: string
+        maxLength: 255
+    TagFilter:
+      name: tag
+      in: query
+      required: false
+      description: Tag slug without the leading `#`. Unknown slugs return an empty collection.
+      schema:
+        type: string
+        maxLength: 255
+    ReporterFilter:
+      name: reporter
+      in: query
+      required: false
+      description: Reporter slug. Inactive reporters are included because existing attribution survives deactivation.
+      schema:
+        type: string
+        maxLength: 255
+    Search:
+      name: search
+      in: query
+      required: false
+      description: Case-insensitive search across title, excerpt, and body.
+      schema:
+        type: string
+        maxLength: 255
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: Publication-time ordering.
+      schema:
+        type: string
+        enum: [newest, oldest]
+        default: newest
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: Public slug of the resource.
+      schema:
+        type: string
+  responses:
+    ValidationError:
+      description: The query parameters failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    NotFound:
+      description: The resource does not exist or is not publicly available.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: A reader session is required.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The reader email address is not verified, or the action is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The request conflicts with the current resource state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: The rate limit was exceeded.
+      headers:
+        Retry-After:
+          description: Seconds until the next attempt is allowed.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    RegisterReaderRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+    LoginReaderRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+        remember:
+          type: boolean
+          default: false
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+    ResetPasswordRequest:
+      type: object
+      required: [token, email, password, password_confirmation]
+      properties:
+        token:
+          type: string
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        avatar:
+          type: string
+          format: binary
+          description: JPEG, PNG, or WebP image up to 2048 KB.
+        remove_avatar:
+          type: boolean
+    DeleteAccountRequest:
+      oneOf:
+        - type: object
+          required: [current_password]
+          properties:
+            current_password:
+              type: string
+              format: password
+          description: Required for readers with a password.
+        - type: object
+          required: [confirmation]
+          properties:
+            confirmation:
+              type: string
+              const: DELETE
+          description: Required for Google-only readers.
+    RequestEmailChangeRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+    VerifyEmailChangeRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    GoogleConnectResponse:
+      type: object
+      required: [redirect_url]
+      properties:
+        redirect_url:
+          type: string
+          format: uri
+    Reader:
+      type: object
+      required: [name, email, avatar_url, email_verified, has_password, google_connected, created_at]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        avatar_url:
+          type: [string, 'null']
+          format: uri
+        email_verified:
+          type: boolean
+        has_password:
+          type: boolean
+        google_connected:
+          type: boolean
+        created_at:
+          type: [string, 'null']
+          format: date-time
+    ReaderResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Reader'
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    ArticleSummary:
+      type: object
+      required: [title, slug, excerpt, featured_image, published_at, byline, category, tags, labels]
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+        excerpt:
+          type: string
+        featured_image:
+          $ref: '#/components/schemas/FeaturedImage'
+        published_at:
+          type: string
+          format: date-time
+          example: '2026-11-04T10:00:00Z'
+        byline:
+          type: string
+          example: Jane Doe
+        category:
+          $ref: '#/components/schemas/Category'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        reporters:
+          type: array
+          description: Omitted for anonymous articles so reporter identities are not exposed.
+          items:
+            $ref: '#/components/schemas/ReporterSummary'
+    Article:
+      allOf:
+        - $ref: '#/components/schemas/ArticleSummary'
+        - type: object
+          required: [body, seo]
+          properties:
+            body:
+              type: string
+            seo:
+              $ref: '#/components/schemas/Seo'
+    FeaturedImage:
+      type: object
+      required: [url, caption]
+      properties:
+        url:
+          type: [string, 'null']
+          format: uri
+        caption:
+          type: [string, 'null']
+    Seo:
+      type: object
+      required: [title, description, canonical_url, image_url, image_alt, type, site_name, twitter_card]
+      properties:
+        title:
+          type: string
+          description: Generated from the article title.
+        description:
+          type: string
+          description: Generated from the article excerpt.
+        canonical_url:
+          type: string
+          format: uri
+          description: Public frontend URL for the article.
+        image_url:
+          type: [string, 'null']
+          format: uri
+          description: Absolute URL of the featured image, or null when unavailable.
+        image_alt:
+          type: [string, 'null']
+          description: Featured image caption, suitable for the alt attribute.
+        type:
+          type: string
+          enum: [article]
+        site_name:
+          type: string
+          description: Configured application name, suitable for og:site_name.
+        twitter_card:
+          type: string
+          enum: [summary_large_image]
+          description: Recommended Twitter card type for articles with a featured image.
+    Category:
+      type: object
+      required: [title, slug]
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+    Tag:
+      type: object
+      required: [title, slug]
+      properties:
+        title:
+          type: string
+          example: '#election'
+        slug:
+          type: string
+          example: election
+    Label:
+      type: object
+      required: [name, slug, description]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          example: exclusive
+        description:
+          type: string
+    ReporterSummary:
+      type: object
+      required: [name, slug, photo]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        photo:
+          type: [string, 'null']
+          format: uri
+    Reporter:
+      allOf:
+        - $ref: '#/components/schemas/ReporterSummary'
+        - type: object
+          required: [biography, social_links]
+          properties:
+            biography:
+              type: [string, 'null']
+            social_links:
+              type: array
+              items:
+                $ref: '#/components/schemas/SocialLink'
+    SocialLink:
+      type: object
+      required: [platform, url]
+      properties:
+        platform:
+          type: string
+          enum: [twitter, facebook, instagram, linkedin, youtube, website]
+        url:
+          type: string
+          format: uri
+    ArticleCollection:
+      type: object
+      required: [data, meta, links]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    ArticleResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Article'
+    ArticleSummaryCollection:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+    Bookmark:
+      type: object
+      required: [bookmarked_at, article]
+      properties:
+        bookmarked_at:
+          type: string
+          format: date-time
+          description: When the reader saved the article, in UTC.
+        article:
+          $ref: '#/components/schemas/ArticleSummary'
+    BookmarkResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Bookmark'
+    BookmarkCollection:
+      type: object
+      required: [data, meta, links]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bookmark'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    HomepageModules:
+      type: object
+      required: [breaking_news, lead_stories, latest_news]
+      properties:
+        breaking_news:
+          type: array
+          description: Active, eligible Breaking News assignments ordered by newest assignment start first.
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+        lead_stories:
+          type: array
+          description: Active, eligible Lead Stories assignments, or the latest eligible article as a fallback.
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+        latest_news:
+          type: array
+          description: Up to four newest eligible articles, excluding those shown in Lead Stories.
+          items:
+            $ref: '#/components/schemas/ArticleSummary'
+    HomepageResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/HomepageModules'
+    LabelCollection:
+      type: object
+      required: [data, meta, links]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    LabelResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Label'
+    CategoryCollection:
+      type: object
+      required: [data, meta, links]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    CategoryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Category'
+    TagCollection:
+      type: object
+      required: [data, meta, links]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    TagResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Tag'
+    ReporterCollection:
+      type: object
+      required: [data, meta, links]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReporterSummary'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    ReporterResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Reporter'
+    PaginationMeta:
+      type: object
+      required: [current_page, from, last_page, links, path, per_page, to, total]
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: [integer, 'null']
+        last_page:
+          type: integer
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/PageLink'
+        path:
+          type: string
+          format: uri
+        per_page:
+          type: integer
+        to:
+          type: [integer, 'null']
+        total:
+          type: integer
+    PageLink:
+      type: object
+      required: [url, label, active]
+      properties:
+        url:
+          type: [string, 'null']
+          format: uri
+        label:
+          type: string
+        active:
+          type: boolean
+    PaginationLinks:
+      type: object
+      required: [first, last, prev, next]
+      properties:
+        first:
+          type: [string, 'null']
+          format: uri
+        last:
+          type: [string, 'null']
+          format: uri
+        prev:
+          type: [string, 'null']
+          format: uri
+        next:
+          type: [string, 'null']
+          format: uri
+    ValidationError:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
