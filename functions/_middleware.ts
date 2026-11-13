@@ -1,5 +1,8 @@
 interface Env {
   API_ORIGIN?: string
+  ASSETS: {
+    fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  }
 }
 
 interface PagesContext {
@@ -23,7 +26,14 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   const url = new URL(context.request.url)
 
   if (!isApiPath(url.pathname)) {
-    return context.next()
+    const response = await context.next()
+    const acceptsHtml = context.request.headers.get('Accept')?.includes('text/html')
+
+    if (response.status === 404 && context.request.method === 'GET' && acceptsHtml) {
+      return context.env.ASSETS.fetch(new URL('/index.html', url))
+    }
+
+    return response
   }
 
   const origin = context.env.API_ORIGIN || DEFAULT_API_ORIGIN
