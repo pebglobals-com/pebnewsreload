@@ -2,8 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { googleAuthUrl, loginReader } from '../lib/api'
+import { loginReader } from '../lib/api'
 import { toFormError } from '../lib/errors'
+import { GoogleAuthButton } from '../components/GoogleAuthButton'
 import {
   AuthShell,
   Field,
@@ -146,12 +147,7 @@ export function LoginPage() {
         <span className="h-px flex-1 bg-line" aria-hidden="true" />
       </div>
 
-      <a
-        href={googleAuthUrl('login')}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[3px] border border-line-strong text-[13px] font-semibold text-ink transition-colors hover:border-action"
-      >
-        Continue with Google
-      </a>
+      <GoogleAuthButton />
     </AuthShell>
   )
 }

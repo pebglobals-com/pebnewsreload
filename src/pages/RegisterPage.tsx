@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { registerReader } from '../lib/api'
 import { toFormError } from '../lib/errors'
+import { GoogleAuthButton } from '../components/GoogleAuthButton'
 import {
   AuthShell,
   Field,
@@ -96,6 +97,16 @@ export function RegisterPage() {
         </>
       }
     >
+      <GoogleAuthButton label="Sign up with Google" />
+
+      <div className="my-5 flex items-center gap-3">
+        <span className="h-px flex-1 bg-line" aria-hidden="true" />
+        <span className="whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink3">
+          or sign up with email
+        </span>
+        <span className="h-px flex-1 bg-line" aria-hidden="true" />
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         {error && <FormAlert>{error}</FormAlert>}
 
