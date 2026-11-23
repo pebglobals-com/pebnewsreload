@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { verifyEmailChange } from '../lib/api'
 import { toFormError } from '../lib/errors'
 import { AuthShell, FormAlert } from '../components/FormUi'
@@ -9,7 +9,7 @@ import { AuthShell, FormAlert } from '../components/FormUi'
 type VerifyState = 'idle' | 'verifying' | 'success' | 'error'
 
 export function EmailChangeVerifyPage() {
-  useDocumentTitle('Confirm email change')
+  usePageMeta({ title: 'Confirm email change', description: 'Confirm your new email address for PEB News.', path: '/verify-email-change', noIndex: true })
 
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''

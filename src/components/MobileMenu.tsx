@@ -1,18 +1,9 @@
 import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import {
-  ChevronRight,
-  Facebook,
-  Instagram,
-  LogOut,
-  Rss,
-  X,
-  Youtube,
-} from 'lucide-react'
-import { navItems, utilityLinks } from '../data/mock'
+import { ChevronRight, LogOut, Rss, X } from 'lucide-react'
+import { exploreLinks, navItems } from '../data/site'
 import { useAuth } from '../hooks/useAuth'
 import { Logo } from './Logo'
-import { XIcon } from './icons'
 
 interface MobileMenuProps {
   open: boolean
@@ -215,38 +206,30 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
         <div className="mt-7">
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white/40">
-            PEB News
+            Explore
           </p>
           <div className="mt-3 grid grid-cols-2 gap-y-2.5">
-            {utilityLinks.map((link) => (
-              <a
-                key={link}
-                href="#"
+            {exploreLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
                 onClick={onClose}
                 className="text-[13px] text-white/65 hover:text-white"
               >
-                {link}
-              </a>
+                {link.label}
+              </Link>
             ))}
           </div>
         </div>
 
         <div className="mt-auto pt-8">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white/40">
-            Follow us
-          </p>
-          <div className="mt-3 flex gap-2">
-            {[Facebook, XIcon, Instagram, Youtube, Rss].map((Icon, index) => (
-              <a
-                key={index}
-                href="#"
-                aria-label="PEB News social media"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
-              >
-                <Icon className="h-3.5 w-3.5" />
-              </a>
-            ))}
-          </div>
+          <a
+            href="/rss.xml"
+            className="inline-flex items-center gap-2 text-[12.5px] font-medium text-white/60 hover:text-white"
+          >
+            <Rss size={14} aria-hidden="true" />
+            RSS feed
+          </a>
           <p className="mt-5 text-[12px] leading-relaxed text-white/40">
             Latest news. Real stories. Impactful reporting.
           </p>

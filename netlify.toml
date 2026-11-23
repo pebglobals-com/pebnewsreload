@@ -2,19 +2,35 @@
   command = "npm run build"
   publish = "dist"
 
-[[redirects]]
-  from = "/api/v1/*"
-  to = "https://pebnews.pebnews.com/api/v1/:splat"
-  status = 200
-  force = true
+[build.environment]
+  NODE_OPTIONS = "--max_old_space_size=2048"
 
 [[redirects]]
-  from = "/sanctum/*"
-  to = "https://pebnews.pebnews.com/sanctum/:splat"
-  status = 200
-  force = true
+from = "/api/v1/*"
+to = "https://pebnews.pebnews.com/api/v1/:splat"
+status = 200
+force = true
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+from = "/sanctum/*"
+to = "https://pebnews.pebnews.com/sanctum/:splat"
+status = 200
+force = true
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+[[headers]]
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Cross-Origin-Opener-Policy = "same-origin"
+Cross-Origin-Resource-Policy = "same-origin"
+X-Permitted-Cross-Domain-Policies = "none"
+Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+Permissions-Policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), screen-wake-lock=(), speaker=(),usb=()"

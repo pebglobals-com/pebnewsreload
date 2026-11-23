@@ -8,7 +8,7 @@ import {
   Pagination,
 } from '../components/ArchiveUi'
 import { useArticleArchive } from '../hooks/useArticleArchive'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { useTaxonomy } from '../hooks/useTaxonomy'
 
 function fallbackLabel(slug: string) {
@@ -24,7 +24,11 @@ export function TagPage() {
 
   const name = info?.name ?? fallbackLabel(slug)
   const label = name.startsWith('#') ? name : `#${name}`
-  useDocumentTitle(label)
+  usePageMeta({
+    title: `${label} — Topic`,
+    description: `Reporting filed under the ${label} topic by PEB News.`,
+    path: `/tags/${slug}`,
+  })
 
   if (notFound) {
     return (

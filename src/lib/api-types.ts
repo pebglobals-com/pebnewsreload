@@ -80,6 +80,10 @@ export interface ApiTagResponse {
   data: ApiTag
 }
 
+export interface ApiLabelResponse {
+  data: ApiLabel
+}
+
 export interface ApiReader {
   name: string
   email: string
@@ -188,6 +192,7 @@ export interface ArticleQuery {
   per_page?: number
   category?: string
   tag?: string
+  label?: string
   reporter?: string
   search?: string
   sort?: 'newest' | 'oldest'

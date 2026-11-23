@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Bell,
   Bookmark,
   CalendarDays,
   ChevronDown,
-  CloudRain,
   LogOut,
   MapPin,
   Menu,
   Search,
   UserRound,
 } from 'lucide-react'
-import { navItems, siteMeta, utilityLinks } from '../data/mock'
+import { exploreLinks, navItems } from '../data/site'
+import { SITE_LOCATION } from '../lib/site-config'
 import { useAuth } from '../hooks/useAuth'
 import { useSearchTopics } from '../hooks/useSearchTopics'
 import { Logo } from './Logo'
@@ -103,36 +102,23 @@ export function Header() {
             <span className="h-3 w-px bg-white/20" aria-hidden="true" />
             <span className="inline-flex items-center gap-1.5">
               <MapPin size={11} aria-hidden="true" />
-              {siteMeta.location} {siteMeta.temperature}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <CloudRain size={11} aria-hidden="true" />
-              {siteMeta.weather}
+              {SITE_LOCATION}
             </span>
           </div>
 
           <div className="flex items-center gap-4">
             <nav aria-label="Utility" className="flex items-center gap-4">
-              {utilityLinks.map((link) => (
-                <a
-                  key={link}
-                  href="#"
+              {exploreLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
                   className="transition-colors hover:text-white"
                 >
-                  {link}
-                </a>
+                  {link.label}
+                </Link>
               ))}
             </nav>
             <span className="h-3 w-px bg-white/20" aria-hidden="true" />
-
-            <button
-              type="button"
-              aria-label="Notifications"
-              className="relative inline-flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white"
-            >
-              <Bell size={13} aria-hidden="true" />
-              <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-brand ring-2 ring-utility" />
-            </button>
 
             {loading ? (
               <span

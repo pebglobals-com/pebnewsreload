@@ -41,6 +41,7 @@ export interface CategoryTile {
 }
 
 export interface HomeData {
+  partial: boolean
   breakingNews: BreakingItem[]
   heroStories: LeadStory[]
   topStories: Story[]
@@ -52,15 +53,4 @@ export interface HomeData {
   categories: CategoryTile[]
 }
 
-export interface VideoStory extends Story {
-  duration: string
-}
 
-export interface PhotoStory {
-  category: string
-  title: string
-  date: string
-  count: number
-  image: string
-  gallery: string[]
-}

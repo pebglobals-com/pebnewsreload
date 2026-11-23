@@ -19,7 +19,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   connectGoogleAccount,
   deleteReaderAccount,
@@ -50,7 +50,7 @@ function initials(name: string) {
 }
 
 export function ProfilePage() {
-  useDocumentTitle('Your account')
+  usePageMeta({ title: 'Your account', description: 'Manage your PEB News reader account and settings.', path: '/profile', noIndex: true })
 
   const navigate = useNavigate()
   const { reader, signIn, signOut, refresh } = useAuth()

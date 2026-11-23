@@ -9,7 +9,7 @@ import {
   Pagination,
 } from '../components/ArchiveUi'
 import { useArticleArchive } from '../hooks/useArticleArchive'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -20,7 +20,14 @@ export function SearchResultsPage() {
     setTerm(query)
   }, [query])
 
-  useDocumentTitle(query ? `Search: ${query}` : 'Search')
+  usePageMeta({
+    title: query ? `Search: ${query}` : 'Search',
+    description: query
+      ? `Search results for “${query}” across PEB News.`
+      : 'Find stories, topics, sections and reporters across PEB News.',
+    path: query ? `/search?q=${encodeURIComponent(query)}` : '/search',
+    noIndex: true,
+  })
 
   const { stories, meta, loading, error, page, setPage, retry } =
     useArticleArchive({ search: query }, { enabled: query.length > 0 })

@@ -4,11 +4,15 @@ import { RefreshCw } from 'lucide-react'
 import { fetchCategories } from '../lib/api'
 import type { ApiCategory } from '../lib/api-types'
 import { localImageForCategory } from '../lib/images'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { ArchiveHeader } from '../components/ArchiveUi'
 
 export function CategoriesIndexPage() {
-  useDocumentTitle('Categories')
+  usePageMeta({
+    title: 'Browse by section',
+    description: 'Every desk and beat covered by PEB News.',
+    path: '/categories',
+  })
 
   const [categories, setCategories] = useState<ApiCategory[]>([])
   const [loading, setLoading] = useState(true)

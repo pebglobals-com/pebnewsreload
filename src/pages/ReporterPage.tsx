@@ -9,7 +9,7 @@ import {
 } from '../components/ArchiveUi'
 import { SmartImage } from '../components/ui'
 import { useArticleArchive } from '../hooks/useArticleArchive'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { useTaxonomy } from '../hooks/useTaxonomy'
 
 const FALLBACK_AVATAR = '/images/avatar-author.jpg'
@@ -38,7 +38,14 @@ export function ReporterPage() {
     useArticleArchive({ reporter: slug }, { enabled: Boolean(slug) })
 
   const name = info?.name ?? fallbackName(slug)
-  useDocumentTitle(name)
+  usePageMeta({
+    title: `${name} — Reporter`,
+    description:
+      info?.biography ?? `Stories reported by ${name} for PEB News.`,
+    path: `/reporters/${slug}`,
+    image: info?.photo,
+    imageAlt: name,
+  })
 
   if (notFound) {
     return (

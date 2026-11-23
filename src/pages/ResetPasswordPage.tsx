@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { resetReaderPassword } from '../lib/api'
 import { toFormError } from '../lib/errors'
 import {
@@ -13,7 +13,7 @@ import {
 } from '../components/FormUi'
 
 export function ResetPasswordPage() {
-  useDocumentTitle('Choose a new password')
+  usePageMeta({ title: 'Choose a new password', description: 'Set a new password for your PEB News account.', path: '/reset-password', noIndex: true })
 
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''

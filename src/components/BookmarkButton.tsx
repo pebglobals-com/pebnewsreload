@@ -5,10 +5,16 @@ import { useAuth } from '../hooks/useAuth'
 import {
   createBookmark,
   deleteBookmark,
-  fetchBookmarks,
+  isArticleBookmarked,
 } from '../lib/api'
 
-export function BookmarkButton({ slug }: { slug: string }) {
+export function BookmarkButton({
+  slug,
+  onDelete,
+}: {
+  slug: string
+  onDelete?: () => void
+}) {
   const { reader, loading } = useAuth()
   const location = useLocation()
   const [bookmarked, setBookmarked] = useState(false)
@@ -25,12 +31,10 @@ export function BookmarkButton({ slug }: { slug: string }) {
     const controller = new AbortController()
     setChecking(true)
 
-    fetchBookmarks(1, 50, controller.signal)
-      .then((collection) => {
+    isArticleBookmarked(slug, controller.signal)
+      .then((saved) => {
         if (controller.signal.aborted) return
-        setBookmarked(
-          collection.data.some((bookmark) => bookmark.article.slug === slug),
-        )
+        setBookmarked(saved)
       })
       .catch(() => {
         if (!controller.signal.aborted) setBookmarked(false)
@@ -64,6 +68,7 @@ export function BookmarkButton({ slug }: { slug: string }) {
       if (bookmarked) {
         await deleteBookmark(slug)
         setBookmarked(false)
+        onDelete?.()
       } else {
         await createBookmark(slug)
         setBookmarked(true)

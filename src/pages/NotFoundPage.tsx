@@ -1,7 +1,15 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export function NotFoundPage() {
+  usePageMeta({
+    title: 'Page not found',
+    description: 'The page you requested could not be found on PEB News.',
+    path: window.location.pathname,
+    noIndex: true,
+  })
+
   return (
     <main id="main-content">
       <div className="container-peb flex min-h-[62vh] flex-col items-center justify-center py-16 text-center">

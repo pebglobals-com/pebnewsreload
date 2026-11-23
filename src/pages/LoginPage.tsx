@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { loginReader } from '../lib/api'
 import { toFormError } from '../lib/errors'
 import { GoogleAuthButton } from '../components/GoogleAuthButton'
@@ -33,7 +33,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
 
-  useDocumentTitle('Sign in')
+  usePageMeta({ title: 'Sign in', description: 'Sign in to your PebNews account.', path: '/login', noIndex: true })
 
   if (!loading && signedIn) {
     return <Navigate to={next} replace />

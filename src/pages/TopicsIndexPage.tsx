@@ -3,11 +3,16 @@ import { Link } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { fetchTags } from '../lib/api'
 import type { ApiTag } from '../lib/api-types'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { ArchiveHeader } from '../components/ArchiveUi'
 
 export function TopicsIndexPage() {
-  useDocumentTitle('Topics')
+  usePageMeta({
+    title: 'Topics',
+    description:
+      'Follow the issues, places and ideas shaping PEB News coverage.',
+    path: '/topics',
+  })
 
   const [tags, setTags] = useState<ApiTag[]>([])
   const [loading, setLoading] = useState(true)

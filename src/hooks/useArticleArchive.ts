@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchArticles } from '../lib/api'
+import { fetchArticles, fetchLabelArticles } from '../lib/api'
 import type { ApiPaginationMeta, ArticleQuery } from '../lib/api-types'
 import { mapStory } from '../lib/article'
 import type { Story } from '../types'
@@ -15,13 +15,14 @@ interface ArchiveState {
 interface ArchiveOptions {
   perPage?: number
   enabled?: boolean
+  label?: string
 }
 
 export function useArticleArchive(
   filters: ArticleQuery,
   options: ArchiveOptions = {},
 ) {
-  const { perPage = 12, enabled = true } = options
+  const { perPage = 12, enabled = true, label } = options
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedPage = Number(searchParams.get('page') ?? '1')
   const page =
@@ -49,10 +50,12 @@ export function useArticleArchive(
 
     setState((current) => ({ ...current, loading: true, error: null }))
 
-    fetchArticles(
-      { ...parsedFilters, page, per_page: perPage },
-      controller.signal,
-    )
+    const query = { ...parsedFilters, page, per_page: perPage }
+    const request = label
+      ? fetchLabelArticles(label, query, controller.signal)
+      : fetchArticles(query, controller.signal)
+
+    request
       .then((collection) => {
         if (controller.signal.aborted) return
         setState({
@@ -76,7 +79,7 @@ export function useArticleArchive(
       })
 
     return () => controller.abort()
-  }, [enabled, filtersKey, page, perPage, requestVersion])
+  }, [enabled, filtersKey, label, page, perPage, requestVersion])
 
   const setPage = useCallback(
     (next: number) => {

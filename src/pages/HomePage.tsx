@@ -8,18 +8,33 @@ import { Newsletter } from '../components/Newsletter'
 import { Popular } from '../components/Popular'
 import { TrendingList } from '../components/TrendingList'
 import { TrendingTopics } from '../components/TrendingTopics'
-import {
-  DeltaBuildAd,
-  GreenDeltaAd,
-  HotelAd,
-  LeaderboardAd,
-  MobileTopAd,
-  RiversideAd,
-} from '../components/ads'
 import { useHomeData } from '../hooks/useHomeData'
+import { usePageMeta } from '../hooks/usePageMeta'
+import { absoluteUrl, SITE_NAME } from '../lib/site-config'
 
 export function HomePage() {
   const { data, loading, error, retry } = useHomeData()
+
+  usePageMeta({
+    title: `${SITE_NAME} — Latest news. Real stories. Impactful reporting.`,
+    description:
+      'Independent, credible African journalism covering the Niger Delta, Nigeria, Africa and the world with depth, context and humanity.',
+    path: '/',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: absoluteUrl('/'),
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: absoluteUrl('/search?q={search_term_string}'),
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  })
 
   if (loading && !data) return <HomePageSkeleton />
   if (error && !data) return <HomePageError message={error} onRetry={retry} />
@@ -29,15 +44,24 @@ export function HomePage() {
     <main id="main-content">
       <BreakingTicker items={data.breakingNews} />
 
-      <div className="container-peb pt-4">
-        <LeaderboardAd />
-      </div>
+      {data.partial && (
+        <div className="border-b border-line bg-surface-2">
+          <div className="container-peb flex flex-wrap items-center justify-between gap-2 py-2 text-[12px] text-ink2">
+            <span role="status">
+              Some homepage sections could not be loaded.
+            </span>
+            <button
+              type="button"
+              onClick={retry}
+              className="font-semibold text-action-soft hover:text-action"
+            >
+              Reload sections
+            </button>
+          </div>
+        </div>
+      )}
 
       <Hero heroStories={data.heroStories} topStories={data.topStories} />
-
-      <div className="container-peb mt-4 lg:hidden">
-        <MobileTopAd />
-      </div>
 
       <div className="container-peb mt-6 pb-10 lg:mt-7 lg:pb-12">
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-12 lg:gap-x-0 lg:gap-y-7">
@@ -47,8 +71,6 @@ export function HomePage() {
               className="order-1 lg:col-span-5 lg:pr-5"
             />
           )}
-
-          <DeltaBuildAd className="order-2 lg:order-4 lg:col-span-12" />
 
           {data.trendingStories.length > 0 && (
             <TrendingList
@@ -71,10 +93,6 @@ export function HomePage() {
             />
           )}
 
-          <div className="order-6 lg:hidden">
-            <Newsletter />
-          </div>
-
           {data.popularStories.length > 0 && (
             <Popular
               stories={data.popularStories}
@@ -82,20 +100,16 @@ export function HomePage() {
             />
           )}
 
-          <RiversideAd className="order-8 lg:hidden" />
-
-          <div className="order-7 hidden lg:order-7 lg:col-span-4 lg:block">
-            <GreenDeltaAd className="h-full" />
+          <div className="order-6 lg:order-7 lg:col-span-4">
+            <Newsletter />
           </div>
 
           {data.categories.length > 0 && (
             <Categories
               categories={data.categories}
-              className="order-9 lg:order-8 lg:col-span-12"
+              className="order-7 lg:order-8 lg:col-span-12"
             />
           )}
-
-          <HotelAd className="order-10 lg:order-9 lg:col-span-12" />
         </div>
       </div>
     </main>
@@ -114,10 +128,6 @@ function HomePageSkeleton() {
           <div className="h-6 w-24 animate-pulse rounded-[2px] bg-surface-2" />
           <div className="h-4 w-full max-w-[420px] animate-pulse rounded bg-surface-2" />
         </div>
-      </div>
-
-      <div className="container-peb pt-4">
-        <div className="h-[34px] animate-pulse rounded-[2px] bg-surface-2" />
       </div>
 
       <section className="pt-4" aria-hidden="true">

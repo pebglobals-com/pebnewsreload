@@ -2,20 +2,6 @@ import type { ImgHTMLAttributes, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 
-interface AdLabelProps {
-  className?: string
-}
-
-export function AdLabel({ className = 'text-white/55' }: AdLabelProps) {
-  return (
-    <span
-      className={`text-[9.5px] font-semibold uppercase leading-none tracking-[0.16em] ${className}`}
-    >
-      Advertisement
-    </span>
-  )
-}
-
 interface SectionHeaderProps {
   title: ReactNode
   subtitle?: string

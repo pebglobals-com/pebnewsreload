@@ -9,8 +9,11 @@ import type {
   ApiErrorBody,
   ApiGoogleConnectResponse,
   ApiHomepageResponse,
+  ApiLabel,
+  ApiLabelResponse,
   ApiMessageResponse,
   ApiReaderResponse,
+  ApiReporter,
   ApiReporterResponse,
   ApiTag,
   ApiTagResponse,
@@ -74,17 +77,41 @@ function buildUrl(
   return url.toString()
 }
 
+async function safeFetch(input: string, init?: RequestInit) {
+  try {
+    return await fetch(input, init)
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error
+    }
+
+    throw new ApiError(
+      'Unable to reach the newsroom. Check your connection and try again.',
+      0,
+    )
+  }
+}
+
 async function parseError(response: Response) {
   let message = `Request failed with status ${response.status}.`
   let errors: Record<string, string[]> | undefined
 
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After')
+    message = retryAfter
+      ? `Too many requests. Please try again in ${retryAfter} seconds.`
+      : 'Too many requests. Please wait a moment and try again.'
+  }
+
   if (response.headers.get('content-type')?.includes('application/json')) {
     try {
       const body = (await response.json()) as ApiErrorBody
-      if (body.message) message = body.message
+      if (body.message && response.status !== 429) message = body.message
       if (body.errors) errors = body.errors
     } catch {
-      message = `Request failed with status ${response.status}.`
+      if (response.status !== 429) {
+        message = `Request failed with status ${response.status}.`
+      }
     }
   }
 
@@ -92,7 +119,7 @@ async function parseError(response: Response) {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}) {
-  const response = await fetch(buildUrl(path, options.query), {
+  const response = await safeFetch(buildUrl(path, options.query), {
     method: 'GET',
     credentials: 'include',
     signal: options.signal,
@@ -100,6 +127,7 @@ async function request<T>(path: string, options: RequestOptions = {}) {
   })
 
   if (!response.ok) throw await parseError(response)
+  if (response.status === 204) return undefined as T
 
   return (await response.json()) as T
 }
@@ -114,7 +142,7 @@ function readCookie(name: string) {
 }
 
 export async function ensureCsrfCookie() {
-  const response = await fetch(CSRF_COOKIE_URL, {
+  const response = await safeFetch(CSRF_COOKIE_URL, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
   })
@@ -122,7 +150,7 @@ export async function ensureCsrfCookie() {
   if (!response.ok) throw await parseError(response)
 }
 
-async function mutation<T>(path: string, options: MutationOptions) {
+async function sendMutation(path: string, options: MutationOptions) {
   await ensureCsrfCookie()
 
   const headers: Record<string, string> = { Accept: 'application/json' }
@@ -137,13 +165,21 @@ async function mutation<T>(path: string, options: MutationOptions) {
     payload = JSON.stringify(options.body)
   }
 
-  const response = await fetch(buildUrl(path), {
+  return safeFetch(buildUrl(path), {
     method: options.method,
     credentials: 'include',
     headers,
     body: payload,
     signal: options.signal,
   })
+}
+
+async function mutation<T>(path: string, options: MutationOptions) {
+  let response = await sendMutation(path, options)
+
+  if (response.status === 419) {
+    response = await sendMutation(path, options)
+  }
 
   if (!response.ok) throw await parseError(response)
 
@@ -200,6 +236,37 @@ export function fetchTags(perPage = 50, signal?: AbortSignal) {
 
 export function fetchTag(slug: string, signal?: AbortSignal) {
   return request<ApiTagResponse>(`/tags/${encodeURIComponent(slug)}`, {
+    signal,
+  })
+}
+
+export function fetchLabels(perPage = 50, signal?: AbortSignal) {
+  return request<ApiCollection<ApiLabel>>('/labels', {
+    query: { per_page: perPage },
+    signal,
+  })
+}
+
+export function fetchLabel(slug: string, signal?: AbortSignal) {
+  return request<ApiLabelResponse>(`/labels/${encodeURIComponent(slug)}`, {
+    signal,
+  })
+}
+
+export function fetchLabelArticles(
+  slug: string,
+  query: Pick<ArticleQuery, 'page' | 'per_page' | 'sort' | 'search'> = {},
+  signal?: AbortSignal,
+) {
+  return request<ApiCollection<ApiArticleSummary>>(
+    `/labels/${encodeURIComponent(slug)}/articles`,
+    { query, signal },
+  )
+}
+
+export function fetchReporters(perPage = 50, signal?: AbortSignal) {
+  return request<ApiCollection<ApiReporter>>('/reporters', {
+    query: { per_page: perPage },
     signal,
   })
 }
@@ -338,6 +405,24 @@ export function fetchBookmarks(
     query: { page, per_page: perPage },
     signal,
   })
+}
+
+export async function isArticleBookmarked(
+  slug: string,
+  signal?: AbortSignal,
+) {
+  let page = 1
+
+  while (true) {
+    const collection = await fetchBookmarks(page, 50, signal)
+
+    if (collection.data.some((bookmark) => bookmark.article.slug === slug)) {
+      return true
+    }
+
+    if (page >= collection.meta.last_page) return false
+    page += 1
+  }
 }
 
 export function createBookmark(slug: string) {

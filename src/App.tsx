@@ -11,12 +11,15 @@ import { EmailChangeVerifyPage } from './pages/EmailChangeVerifyPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GoogleCallbackPage } from './pages/GoogleCallbackPage'
 import { HomePage } from './pages/HomePage'
+import { LabelPage } from './pages/LabelPage'
+import { LabelsIndexPage } from './pages/LabelsIndexPage'
 import { LatestPage } from './pages/LatestPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ReporterPage } from './pages/ReporterPage'
+import { ReportersIndexPage } from './pages/ReportersIndexPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SearchResultsPage } from './pages/SearchResultsPage'
 import { TagPage } from './pages/TagPage'
@@ -56,6 +59,9 @@ export default function App() {
           <Route path="/categories/:slug" element={<CategoryPage />} />
           <Route path="/topics" element={<TopicsIndexPage />} />
           <Route path="/tags/:slug" element={<TagPage />} />
+          <Route path="/labels" element={<LabelsIndexPage />} />
+          <Route path="/labels/:slug" element={<LabelPage />} />
+          <Route path="/reporters" element={<ReportersIndexPage />} />
           <Route path="/reporters/:slug" element={<ReporterPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/articles/:slug" element={<ArticlePage />} />

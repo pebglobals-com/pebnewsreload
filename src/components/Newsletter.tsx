@@ -1,25 +1,43 @@
 import { useState, type FormEvent } from 'react'
-import { Check, Mail } from 'lucide-react'
+import { Check, Loader2, Mail } from 'lucide-react'
+import {
+  NEWSLETTER_ENDPOINT,
+  subscribeToNewsletter,
+} from '../lib/newsletter'
 
 export function Newsletter() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'error' | 'success'>('idle')
+  const [status, setStatus] = useState<'idle' | 'pending' | 'error' | 'success'>(
+    'idle',
+  )
+  const [message, setMessage] = useState('')
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const value = email.trim()
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       setStatus('error')
+      setMessage('Please enter a valid email address.')
       return
     }
 
+    setStatus('pending')
+    setMessage('')
+
     try {
-      localStorage.setItem('peb-newsletter-email', value)
-    } catch {
-      // Subscription will be wired to the API later.
+      await subscribeToNewsletter(value)
+      setStatus('success')
+      setMessage('You’re subscribed. Look out for the next edition.')
+      setEmail('')
+    } catch (error) {
+      setStatus('error')
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'The subscription could not be completed.',
+      )
     }
-    setStatus('success')
-    setEmail('')
   }
 
   return (
@@ -49,14 +67,18 @@ export function Newsletter() {
           and around the world.
         </p>
 
-        {status === 'success' ? (
+        {!NEWSLETTER_ENDPOINT ? (
+          <p className="mt-3 rounded-[3px] border border-line bg-page px-3 py-2.5 text-[11.5px] leading-relaxed text-ink3">
+            Newsletter signup is not available yet. Check back soon.
+          </p>
+        ) : status === 'success' ? (
           <div
             className="mt-3 flex items-center gap-2 rounded-[3px] border border-[#008751]/30 bg-[#008751]/10 px-3 py-2.5 text-[12px] font-medium text-[#007a49] dark:text-[#7fe0b0]"
             role="status"
             aria-live="polite"
           >
             <Check size={14} aria-hidden="true" />
-            You&apos;re subscribed. Look out for the next edition.
+            {message}
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="mt-3">
@@ -68,7 +90,10 @@ export function Newsletter() {
                   value={email}
                   onChange={(event) => {
                     setEmail(event.target.value)
-                    if (status === 'error') setStatus('idle')
+                    if (status === 'error') {
+                      setStatus('idle')
+                      setMessage('')
+                    }
                   }}
                   placeholder="Your email address"
                   autoComplete="email"
@@ -78,8 +103,12 @@ export function Newsletter() {
               </label>
               <button
                 type="submit"
-                className="inline-flex h-[42px] shrink-0 items-center justify-center rounded-[3px] bg-brand px-4 text-[11.5px] font-semibold text-white transition-colors hover:bg-[#c90220]"
+                disabled={status === 'pending'}
+                className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-[3px] bg-brand px-4 text-[11.5px] font-semibold text-white transition-colors hover:bg-[#c90220] disabled:cursor-wait disabled:opacity-70"
               >
+                {status === 'pending' && (
+                  <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                )}
                 Subscribe
               </button>
             </div>
@@ -90,7 +119,7 @@ export function Newsletter() {
               role={status === 'error' ? 'alert' : undefined}
             >
               {status === 'error'
-                ? 'Please enter a valid email address.'
+                ? message
                 : 'No spam. Unsubscribe anytime.'}
             </p>
           </form>

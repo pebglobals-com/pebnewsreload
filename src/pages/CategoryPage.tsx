@@ -8,7 +8,7 @@ import {
   Pagination,
 } from '../components/ArchiveUi'
 import { useArticleArchive } from '../hooks/useArticleArchive'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { useTaxonomy } from '../hooks/useTaxonomy'
 
 function fallbackName(slug: string) {
@@ -26,7 +26,11 @@ export function CategoryPage() {
     useArticleArchive({ category: slug }, { enabled: Boolean(slug) })
 
   const name = info?.name ?? fallbackName(slug)
-  useDocumentTitle(name)
+  usePageMeta({
+    title: `${name} — News`,
+    description: `Every story filed under ${name} by PEB News.`,
+    path: `/categories/${slug}`,
+  })
 
   if (notFound) {
     return (

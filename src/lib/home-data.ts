@@ -67,13 +67,25 @@ export function buildTrendingTopics(
 }
 
 export async function loadHomeData(signal?: AbortSignal): Promise<HomeData> {
-  const [homepage, articleCollection, categoryCollection, tagCollection] =
-    await Promise.all([
+  const [homepageResult, articlesResult, categoriesResult, tagsResult] =
+    await Promise.allSettled([
       fetchHomepage(signal),
       fetchArticles({ per_page: 40, sort: 'newest' }, signal),
       fetchCategories(50, signal),
       fetchTags(50, signal),
     ])
+
+  if (homepageResult.status === 'rejected') throw homepageResult.reason
+
+  const homepage = homepageResult.value
+  const articles =
+    articlesResult.status === 'fulfilled' ? articlesResult.value.data : []
+  const categories =
+    categoriesResult.status === 'fulfilled' ? categoriesResult.value.data : []
+  const tags = tagsResult.status === 'fulfilled' ? tagsResult.value.data : []
+  const partial = [articlesResult, categoriesResult, tagsResult].some(
+    (result) => result.status === 'rejected',
+  )
 
   const leadArticles = uniqueArticles(homepage.data.lead_stories)
   const leadSlugs = new Set(leadArticles.map((article) => article.slug))
@@ -90,11 +102,12 @@ export async function loadHomeData(signal?: AbortSignal): Promise<HomeData> {
     ...latestArticles.map((article) => article.slug),
     ...breakingArticles.map((article) => article.slug),
   ])
-  const extraArticles = uniqueArticles(articleCollection.data).filter(
+  const extraArticles = uniqueArticles(articles).filter(
     (article) => !reservedSlugs.has(article.slug),
   )
 
   return {
+    partial,
     breakingNews: breakingArticles.map((article) => ({
       id: article.slug,
       text: cleanText(article.title),
@@ -108,8 +121,8 @@ export async function loadHomeData(signal?: AbortSignal): Promise<HomeData> {
       title: cleanText(article.title),
     })),
     popularStories: extraArticles.slice(9, 13).map(mapStory),
-    trendingTopics: buildTrendingTopics(tagCollection.data),
+    trendingTopics: buildTrendingTopics(tags),
     forYouStories: extraArticles.slice(13, 17).map(mapStory),
-    categories: buildCategories(categoryCollection.data),
+    categories: buildCategories(categories),
   }
 }

@@ -7,10 +7,15 @@ import {
   Pagination,
 } from '../components/ArchiveUi'
 import { useArticleArchive } from '../hooks/useArticleArchive'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export function LatestPage() {
-  useDocumentTitle('Latest News')
+  usePageMeta({
+    title: 'Latest News',
+    description:
+      'Every story from the PEB News desk, newest first. Reporting from the Niger Delta, Nigeria, Africa and the world.',
+    path: '/latest',
+  })
 
   const { stories, meta, loading, error, page, setPage, retry } =
     useArticleArchive({ sort: 'newest' })

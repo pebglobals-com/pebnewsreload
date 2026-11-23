@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import {
   ApiError,
   fetchCategory,
+  fetchLabel,
   fetchReporter,
   fetchTag,
 } from '../lib/api'
 import type { ApiSocialLink } from '../lib/api-types'
 
-export type TaxonomyKind = 'category' | 'tag' | 'reporter'
+export type TaxonomyKind = 'category' | 'tag' | 'label' | 'reporter'
 
 export interface TaxonomyInfo {
   name: string
@@ -50,6 +51,16 @@ function loadTaxonomy(
     return fetchTag(slug, signal).then((response) => ({
       name: response.data.title,
       description: null,
+      photo: null,
+      biography: null,
+      socialLinks: [],
+    }))
+  }
+
+  if (kind === 'label') {
+    return fetchLabel(slug, signal).then((response) => ({
+      name: response.data.name,
+      description: response.data.description || null,
       photo: null,
       biography: null,
       socialLinks: [],

@@ -17,7 +17,9 @@ import {
   readingTimeMinutes,
 } from '../lib/article'
 import { localImageForCategory } from '../lib/images'
+import { absoluteUrl, SITE_NAME } from '../lib/site-config'
 import { useArticle } from '../hooks/useArticle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import type { Story } from '../types'
 import { BookmarkButton } from '../components/BookmarkButton'
 import { SmartImage, Tag } from '../components/ui'
@@ -56,27 +58,63 @@ export function ArticlePage() {
     )
   }, [safeBody])
 
-  useEffect(() => {
-    if (!article) return
-
-    const previousTitle = document.title
-    const meta = document.querySelector('meta[name="description"]')
-    const previousDescription = meta?.getAttribute('content') ?? ''
-
-    document.title = `${cleanText(article.title)} — PEB News`
-
-    if (meta) {
-      meta.setAttribute(
-        'content',
-        cleanText(article.seo?.description || article.excerpt || ''),
-      )
-    }
-
-    return () => {
-      document.title = previousTitle
-      if (meta) meta.setAttribute('content', previousDescription)
-    }
-  }, [article])
+  usePageMeta(
+    article
+      ? {
+          title: cleanText(article.title),
+          description: cleanText(
+            article.seo?.description || article.excerpt || '',
+          ),
+          path: `/articles/${article.slug}`,
+          canonicalUrl: article.seo?.canonical_url,
+          image:
+            article.featured_image?.url ||
+            localImageForCategory(article.category?.slug),
+          imageAlt: cleanText(article.title),
+          type: 'article',
+          publishedTime: article.published_at,
+          modifiedTime: article.published_at,
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'NewsArticle',
+            headline: cleanText(article.title),
+            description: cleanText(
+              article.seo?.description || article.excerpt || '',
+            ),
+            image: [
+              absoluteUrl(
+                article.featured_image?.url ||
+                  localImageForCategory(article.category?.slug),
+              ),
+            ],
+            datePublished: article.published_at,
+            dateModified: article.published_at,
+            author: [
+              {
+                '@type': 'Person',
+                name: cleanText(article.byline) || 'PEB News Staff',
+              },
+            ],
+            publisher: {
+              '@type': 'Organization',
+              name: SITE_NAME,
+              logo: {
+                '@type': 'ImageObject',
+                url: absoluteUrl('/peb-news-logo.svg'),
+              },
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id':
+                article.seo?.canonical_url ||
+                absoluteUrl(`/articles/${article.slug}`),
+            },
+            articleSection: cleanText(article.category?.title ?? 'News'),
+            keywords: article.tags?.map((tag) => tag.title).join(', '),
+          },
+        }
+      : null,
+  )
 
   if (loading) return <ArticleSkeleton />
   if (notFound) return <ArticleNotFound />
@@ -153,14 +191,19 @@ export function ArticlePage() {
         <header className="mx-auto max-w-[820px]">
           <div className="flex flex-wrap items-center gap-2">
             {article.labels?.map((label) => (
-              <Tag
+              <Link
                 key={label.slug}
-                tone={
-                  label.slug.toLowerCase() === 'exclusive' ? 'red' : 'blue'
-                }
+                to={`/labels/${label.slug}`}
+                className="transition-opacity hover:opacity-80"
               >
-                {cleanText(label.name)}
-              </Tag>
+                <Tag
+                  tone={
+                    label.slug.toLowerCase() === 'exclusive' ? 'red' : 'blue'
+                  }
+                >
+                  {cleanText(label.name)}
+                </Tag>
+              </Link>
             ))}
             <Link
               to={`/categories/${article.category.slug}`}

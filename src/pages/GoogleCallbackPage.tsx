@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { AuthShell, FormAlert } from '../components/FormUi'
 
 const STATUS_COPY: Record<
@@ -66,7 +66,7 @@ const SUCCESS_STATUSES = new Set([
 ])
 
 export function GoogleCallbackPage() {
-  useDocumentTitle('Google sign-in')
+  usePageMeta({ title: 'Google sign-in', description: 'Completing Google sign-in for PEB News.', path: '/auth/google/callback', noIndex: true })
 
   const [searchParams] = useSearchParams()
   const status = searchParams.get('status') ?? ''

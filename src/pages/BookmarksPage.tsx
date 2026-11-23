@@ -8,7 +8,7 @@ import {
   Pagination,
 } from '../components/ArchiveUi'
 import { SmartImage } from '../components/ui'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { deleteBookmark, fetchBookmarks } from '../lib/api'
 import type { ApiBookmark, ApiPaginationMeta } from '../lib/api-types'
 import { formatRelativeTime, mapStory } from '../lib/article'
@@ -21,7 +21,7 @@ function parsePage(value: string | null) {
 }
 
 export function BookmarksPage() {
-  useDocumentTitle('Saved stories')
+  usePageMeta({ title: 'Saved stories', description: 'Stories you have bookmarked for later on PEB News.', path: '/bookmarks', noIndex: true })
 
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parsePage(searchParams.get('page'))

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { resendVerificationEmail } from '../lib/api'
 import { toFormError } from '../lib/errors'
 import { AuthShell, FormAlert, SubmitButton } from '../components/FormUi'
@@ -30,7 +30,7 @@ const STATUS_COPY: Record<
 }
 
 export function VerifyEmailPage() {
-  useDocumentTitle('Verify your email')
+  usePageMeta({ title: 'Verify your email', description: 'Verify your reader account email address.', path: '/verify-email', noIndex: true })
 
   const [searchParams] = useSearchParams()
   const status = searchParams.get('status')

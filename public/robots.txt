@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /api/
+Disallow: /sanctum/
+Allow: /$
+Sitemap: https://pebnews.com/sitemap.xml
